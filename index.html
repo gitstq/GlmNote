@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlmNote - 智能 Markdown 知识库</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📝</text></svg>">
+<!-- marked.js for Markdown rendering -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js">
+</script>
+<!-- highlight.js for code syntax highlighting -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/styles/github.min.css" id="hljs-theme-link">
+<script src="https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/highlight.min.js">
+</script>
+<style>
+  /* ============ CSS Variables & Theme ============ */
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --bg-tertiary: #f0f1f3;
+    --bg-hover: #e8eaed;
+    --text-primary: #1a1a2e;
+    --text-secondary: #5f6368;
+    --text-tertiary: #9aa0a6;
+    --border-color: #e2e5e9;
+    --accent: #4f6ef7;
+    --accent-light: #e8ecff;
+    --accent-hover: #3b5de7;
+    --danger: #e74c3c;
+    --danger-hover: #c0392b;
+    --success: #27ae60;
+    --warning: #f39c12;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --sidebar-width: 320px;
+    --ai-panel-width: 380px;
+    --header-height: 56px;
+    --transition: all 0.2s ease;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --font-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+  }
+  [data-theme="dark"] {
+    --bg-primary: #1a1b23;
+    --bg-secondary: #22232d;
+    --bg-tertiary: #2a2b37;
+    --bg-hover: #33344a;
+    --text-primary: #e4e5ed;
+    --text-secondary: #9d9eb5;
+    --text-tertiary: #6b6d8a;
+    --border-color: #33344a;
+    --accent: #6d8cff;
+    --accent-light: #2a2d4a;
+    --accent-hover: #8aa0ff;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  /* ============ Global Reset ============ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { cursor: pointer; font-family: inherit; border: none; background: none; color: inherit; }
+  input, textarea, select { font-family: inherit; color: inherit; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+  /* ============ Layout ============ */
+  .app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+  }
+  /* ============ Sidebar ============ */
+  .sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: var(--transition);
+  }
+  .sidebar-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+    min-height: var(--header-height);
+  }
+  .sidebar-header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent);
+  }
+  .sidebar-header h1 .logo-icon { font-size: 22px; }
+  .sidebar-actions { display: flex; gap: 6px; align-items: center; }
+  .sidebar-actions button {
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm);
+    font-size: 16px;
+    transition: var(--transition);
+  }
+  .sidebar-actions button:hover { background: var(--bg-hover); }
+  /* ============ Search ============ */
+  .search-bar {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .search-bar .search-input-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    padding: 0 12px;
+    border: 1px solid transparent;
+    transition: var(--transition);
+  }
+  .search-bar .search-input-wrap:focus-within {
+    border-color: var(--accent);
+    background: var(--bg-primary);
+  }
+  .search-bar .search-input-wrap span { color: var(--text-tertiary); font-size: 14px; margin-right: 8px; }
+  .search-bar input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 8px 0;
+    font-size: 13px;
+    outline: none;
+  }
+  .search-bar input::placeholder { color: var(--text-tertiary); }
+  /* ============ Tag Filter ============ */
+  .tag-bar {
+    padding: 8px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    border-bottom: 1px solid var(--border-color);
+    min-height: 44px;
+    align-items: center;
+  }
+  .tag-chip {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+  .tag-chip:hover { background: var(--bg-hover); }
+  .tag-chip.active {
+    background: var(--accent-light);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .tag-chip.add-tag {
+    border-style: dashed;
+    color: var(--text-tertiary);
+    cursor: pointer;
+  }
+  .tag-chip.add-tag:hover { color: var(--accent); border-color: var(--accent); }
+  /* ============ Note List ============ */
+  .note-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  .note-list-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--text-tertiary);
+    font-size: 14px;
+    gap: 12px;
+  }
+  .note-list-empty .big-icon { font-size: 48px; opacity: 0.5; }
+  .note-item {
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    margin-bottom: 2px;
+    position: relative;
+  }
+  .note-item:hover { background: var(--bg-hover); }
+  .note-item.active {
+    background: var(--accent-light);
+    border-left: 3px solid var(--accent);
+  }
+  .note-item .note-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .note-item .note-title .pin-icon { font-size: 12px; color: var(--warning); }
+  .note-item .note-preview {
+    font-size: 12px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 4px;
+  }
+  .note-item .note-meta {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .note-item .note-tags-inline {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .note-item .note-tags-inline .mini-tag {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
+  }
+  .note-item .note-delete {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 14px;
+    color: var(--text-tertiary);
+    transition: var(--transition);
+  }
+  .note-item:hover .note-delete { display: flex; }
+  .note-item .note-delete:hover { color: var(--danger); background: rgba(231,76,60,0.1); }
+  /* ============ Main Content Area ============ */
+  .main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+  /* ============ Editor Header ============ */
+  .editor-header {
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border-color);
+    min-height: var(--header-height);
+  }
+  .editor-header .note-title-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    font-weight: 700;
+    outline: none;
+    min-width: 0;
+  }
+  .editor-header .note-title-input::placeholder { color: var(--text-tertiary); }
+  .editor-header .header-actions { display: flex; gap: 6px; align-items: center; }
+  .editor-header .header-actions button {
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm);
+    font-size: 16px;
+    transition: var(--transition);
+  }
+  .editor-header .header-actions button:hover { background: var(--bg-hover); }
+  .editor-header .header-actions button.toggle-ai {
+    background: var(--accent-light);
+    color: var(--accent);
+  }
+  .editor-header .header-actions button.toggle-ai:hover { background: var(--accent); color: white; }
+  .editor-header .header-actions button.toggle-ai.active { background: var(--accent); color: white; }
+  /* ============ Editor Body ============ */
+  .editor-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+  .editor-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .editor-pane .pane-header {
+    padding: 8px 20px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-secondary);
+  }
+  .editor-pane .pane-header .pane-tabs { display: flex; gap: 4px; }
+  .editor-pane .pane-header .pane-tab {
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: var(--transition);
+    cursor: pointer;
+  }
+  .editor-pane .pane-header .pane-tab.active {
+    background: var(--accent-light);
+    color: var(--accent);
+  }
+  .editor-pane .pane-header .pane-tab:hover:not(.active) { background: var(--bg-hover); }
+  .editor-textarea {
+    flex: 1;
+    border: none;
+    outline: none;
+    resize: none;
+    padding: 20px 24px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.8;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    tab-size: 2;
+  }
+  .editor-textarea::placeholder { color: var(--text-tertiary); }
+  .preview-pane {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    border-left: 1px solid var(--border-color);
+    background: var(--bg-primary);
+  }
+  /* When no split, full width */
+  .editor-body.split .editor-pane { max-width: 50%; }
+  .editor-body.edit-only .preview-pane { display: none; }
+  .editor-body.preview-only .editor-pane { display: none; }
+  .editor-body.preview-only .preview-pane { border-left: none; }
+  /* ============ Markdown Preview Styles ============ */
+  .preview-pane h1, .preview-pane h2, .preview-pane h3,
+  .preview-pane h4, .preview-pane h5, .preview-pane h6 {
+    margin-top: 24px;
+    margin-bottom: 12px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--text-primary);
+  }
+  .preview-pane h1 { font-size: 2em; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+  .preview-pane h2 { font-size: 1.5em; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
+  .preview-pane h3 { font-size: 1.25em; }
+  .preview-pane p { margin-bottom: 16px; color: var(--text-primary); }
+  .preview-pane ul, .preview-pane ol { margin-bottom: 16px; padding-left: 24px; }
+  .preview-pane li { margin-bottom: 4px; }
+  .preview-pane blockquote {
+    margin: 16px 0;
+    padding: 12px 16px;
+    border-left: 4px solid var(--accent);
+    background: var(--bg-secondary);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    color: var(--text-secondary);
+  }
+  .preview-pane code {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .preview-pane pre {
+    margin: 16px 0;
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    overflow-x: auto;
+  }
+  .preview-pane pre code { background: none; padding: 0; border-radius: 0; }
+  .preview-pane table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+  }
+  .preview-pane th, .preview-pane td {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    text-align: left;
+  }
+  .preview-pane th { background: var(--bg-secondary); font-weight: 600; }
+  .preview-pane img { max-width: 100%; border-radius: var(--radius-sm); }
+  .preview-pane hr { border: none; border-top: 1px solid var(--border-color); margin: 24px 0; }
+  .preview-pane a { color: var(--accent); }
+  /* ============ AI Panel ============ */
+  .ai-panel {
+    width: var(--ai-panel-width);
+    min-width: var(--ai-panel-width);
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: var(--transition);
+  }
+  .ai-panel.hidden { width: 0; min-width: 0; border-left: none; overflow: hidden; }
+  .ai-panel-header {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+    min-height: var(--header-height);
+  }
+  .ai-panel-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ai-panel-header h3 .ai-icon { width: 20px; height: 20px; }
+  .ai-panel-header .ai-close-btn {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: var(--transition);
+  }
+  .ai-panel-header .ai-close-btn:hover { background: var(--bg-hover); }
+  .ai-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .ai-message {
+    display: flex;
+    gap: 10px;
+    animation: msgIn 0.2s ease;
+  }
+  @keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .ai-message .msg-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .ai-message.user .msg-avatar { background: var(--accent); color: white; }
+  .ai-message.assistant .msg-avatar { background: var(--bg-tertiary); color: var(--text-secondary); }
+  .ai-message .msg-content {
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    line-height: 1.6;
+    max-width: 85%;
+    word-wrap: break-word;
+  }
+  .ai-message.user { flex-direction: row-reverse; }
+  .ai-message.user .msg-content {
+    background: var(--accent);
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+  .ai-message.assistant .msg-content {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-bottom-left-radius: 4px;
+  }
+  .ai-message .msg-content pre {
+    margin: 8px 0;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    font-size: 12px;
+    overflow-x: auto;
+  }
+  .ai-message .msg-content code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .ai-message .msg-content p { margin-bottom: 8px; }
+  .ai-message .msg-content p:last-child { margin-bottom: 0; }
+  .ai-welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-tertiary);
+    text-align: center;
+    padding: 20px;
+    gap: 8px;
+  }
+  .ai-welcome .ai-welcome-icon { font-size: 48px; opacity: 0.4; }
+  .ai-welcome p { font-size: 13px; }
+  .ai-input-bar {
+    padding: 12px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .ai-input-bar textarea {
+    flex: 1;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 13px;
+    background: var(--bg-primary);
+    outline: none;
+    resize: none;
+    min-height: 40px;
+    max-height: 120px;
+    line-height: 1.5;
+    transition: var(--transition);
+  }
+  .ai-input-bar textarea:focus { border-color: var(--accent); }
+  .ai-input-bar .ai-send-btn {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+    color: white;
+    font-size: 18px;
+    transition: var(--transition);
+    flex-shrink: 0;
+  }
+  .ai-input-bar .ai-send-btn:hover { background: var(--accent-hover); }
+  .ai-input-bar .ai-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ai-loading {
+    display: flex;
+    gap: 4px;
+    padding: 10px 14px;
+    align-items: center;
+  }
+  .ai-loading span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-tertiary);
+    animation: dotPulse 1.4s infinite ease-in-out both;
+  }
+  .ai-loading span:nth-child(1) { animation-delay: -0.32s; }
+  .ai-loading span:nth-child(2) { animation-delay: -0.16s; }
+  .ai-loading span:nth-child(3) { animation-delay: 0s; }
+  @keyframes dotPulse {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+  }
+  /* ============ Settings Modal ============ */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+  }
+  .modal-overlay.open { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    padding: 28px 32px;
+    width: 460px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .modal h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .modal .form-group {
+    margin-bottom: 16px;
+  }
+  .modal .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+  }
+  .modal .form-group label .label-desc {
+    font-weight: 400;
+    color: var(--text-tertiary);
+    font-size: 12px;
+  }
+  .modal .form-group input, .modal .form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    background: var(--bg-secondary);
+    outline: none;
+    transition: var(--transition);
+  }
+  .modal .form-group input:focus, .modal .form-group select:focus {
+    border-color: var(--accent);
+    background: var(--bg-primary);
+  }
+  .modal .form-group .hint {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+  .btn {
+    padding: 8px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    transition: var(--transition);
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-secondary { background: var(--bg-tertiary); color: var(--text-secondary); }
+  .btn-secondary:hover { background: var(--bg-hover); }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-danger:hover { background: var(--danger-hover); }
+  /* ============ Welcome Screen ============ */
+  .welcome-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+    text-align: center;
+    padding: 40px;
+  }
+  .welcome-screen .welcome-icon { font-size: 80px; margin-bottom: 24px; opacity: 0.6; }
+  .welcome-screen h2 { font-size: 24px; color: var(--text-primary); margin-bottom: 8px; }
+  .welcome-screen p { font-size: 14px; max-width: 400px; line-height: 1.8; }
+  .welcome-screen .shortcuts {
+    margin-top: 24px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .welcome-screen .shortcut-item {
+    padding: 10px 16px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .welcome-screen .shortcut-item kbd {
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    border: 1px solid var(--border-color);
+  }
+  /* ============ Toast ============ */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toast {
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: white;
+    box-shadow: var(--shadow-md);
+    animation: toastIn 0.3s ease;
+    max-width: 360px;
+  }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+  .toast.info { background: var(--accent); }
+  @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+  /* ============ Responsive ============ */
+  @media (max-width: 768px) {
+    .sidebar { width: 260px; min-width: 260px; }
+    .ai-panel { width: 100%; min-width: auto; position: fixed; top: 0; right: 0; bottom: 0; z-index: 100; }
+    .editor-header { padding: 8px 12px; }
+    .editor-body.split .editor-pane { max-width: 100%; }
+    .preview-pane { padding: 12px 16px; }
+    .editor-textarea { padding: 12px 16px; }
+    .modal { width: 95vw; padding: 20px; }
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- ============ Sidebar ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h1><span class="logo-icon">📝</span> GlmNote</h1>
+      <div class="sidebar-actions">
+        <button onclick="createNote()" title="新建笔记">➕</button>
+        <button onclick="openSettings()" title="设置">⚙️</button>
+      </div>
+    </div>
+    <div class="search-bar">
+      <div class="search-input-wrap">
+        <span>🔍</span>
+        <input type="text" id="searchInput" placeholder="搜索笔记..." oninput="filterNotes()">
+      </div>
+    </div>
+    <div class="tag-bar" id="tagBar">
+      <span class="tag-chip active" data-tag="all" onclick="filterByTag('all')">🏷️ 全部</span>
+    </div>
+    <div class="note-list" id="noteList">
+      <div class="note-list-empty">
+        <span class="big-icon">📄</span>
+        <span>暂无笔记，点击 ➕ 创建第一篇笔记</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ Main Area ============ -->
+  <main class="main-area">
+    <!-- Welcome Screen -->
+    <div class="welcome-screen" id="welcomeScreen">
+      <div class="welcome-icon">📝</div>
+      <h2>欢迎使用 GlmNote</h2>
+      <p>基于 GLM-5.1 的智能 Markdown 知识库<br>让你的笔记更智能、更高效</p>
+      <div class="shortcuts">
+        <div class="shortcut-item"><kbd>Ctrl</kbd> + <kbd>N</kbd> 新建笔记</div>
+        <div class="shortcut-item"><kbd>Ctrl</kbd> + <kbd>S</kbd> 保存笔记</div>
+        <div class="shortcut-item"><kbd>Ctrl</kbd> + <kbd>F</kbd> 搜索笔记</div>
+        <div class="shortcut-item"><kbd>Ctrl</kbd> + <kbd>I</kbd> 切换 AI 面板</div>
+      </div>
+    </div>
+
+    <!-- Editor (hidden by default) -->
+    <div id="editorArea" class="hidden" style="display:none;flex-direction:column;height:100%;">
+      <div class="editor-header">
+        <input type="text" class="note-title-input" id="noteTitleInput" placeholder="输入笔记标题..." oninput="autoSave()">
+        <div class="header-actions">
+          <button onclick="togglePin()" id="pinBtn" title="置顶">📌</button>
+          <button onclick="toggleViewMode()" id="viewModeBtn" title="切换视图">📐</button>
+          <button onclick="exportNote()" title="导出 Markdown">📥</button>
+          <button class="toggle-ai" id="toggleAiBtn" onclick="toggleAiPanel()" title="AI 助手 (Ctrl+I)">🤖</button>
+        </div>
+      </div>
+      <div class="editor-body split" id="editorBody">
+        <div class="editor-pane">
+          <div class="pane-header">
+            <span>Markdown</span>
+            <div class="pane-tabs">
+              <span class="pane-tab active" data-mode="split" onclick="setEditorMode('split')">📱 分栏</span>
+              <span class="pane-tab" data-mode="edit" onclick="setEditorMode('edit')">✏️ 编辑</span>
+              <span class="pane-tab" data-mode="preview" onclick="setEditorMode('preview')">👁️ 预览</span>
+            </div>
+          </div>
+          <textarea class="editor-textarea" id="noteContentInput" placeholder="在此编写 Markdown 内容..." oninput="updatePreview(); autoSave();" spellcheck="false"></textarea>
+        </div>
+        <div class="preview-pane" id="previewPane"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============ AI Panel ============ -->
+  <aside class="ai-panel hidden" id="aiPanel">
+    <div class="ai-panel-header">
+      <h3><span class="ai-icon">🤖</span> AI 助手</h3>
+      <button class="ai-close-btn" onclick="toggleAiPanel()">✕</button>
+    </div>
+    <div class="ai-messages" id="aiMessages">
+      <div class="ai-welcome" id="aiWelcome">
+        <div class="ai-welcome-icon">🧠</div>
+        <p>我是你的 AI 知识助手</p>
+        <p style="font-size:12px;">支持 GLM-5.1 等多款模型<br>可总结、解释、扩展你的笔记内容</p>
+        <p style="font-size:11px;margin-top:8px;">💡 先在设置中配置 API</p>
+      </div>
+    </div>
+    <div class="ai-input-bar">
+      <textarea id="aiInput" placeholder="向 AI 提问..." rows="1" oninput="autoResize(this)" onkeydown="handleAiKeydown(event)"></textarea>
+      <button class="ai-send-btn" id="aiSendBtn" onclick="sendAiMessage()">➤</button>
+    </div>
+  </aside>
+</div>
+
+<!-- ============ Settings Modal ============ -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h2>⚙️ 设置</h2>
+    <div class="form-group">
+      <label>API 地址 <span class="label-desc">(OpenAI 兼容格式)</span></label>
+      <input type="url" id="settingEndpoint" placeholder="https://open.bigmodel.cn/api/paas/v4">
+      <div class="hint">支持 OpenAI、GLM-5.1、DeepSeek 等兼容接口</div>
+    </div>
+    <div class="form-group">
+      <label>API Key</label>
+      <input type="password" id="settingApiKey" placeholder="sk-...">
+      <div class="hint">你的 API 密钥，安全存储于浏览器本地</div>
+    </div>
+    <div class="form-group">
+      <label>模型名称</label>
+      <input type="text" id="settingModel" placeholder="glm-5.1-flash">
+      <div class="hint">如 glm-5.1-flash, gpt-4o, deepseek-chat 等</div>
+    </div>
+    <div class="form-group">
+      <label>主题</label>
+      <select id="settingTheme" onchange="setTheme(this.value)">
+        <option value="light">☀️ 浅色</option>
+        <option value="dark">🌙 深色</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeSettings()">取消</button>
+      <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Toast Container ============ -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  // ===================================================================
+  // GlmNote - Application Core
+  // ===================================================================
+
+  // ---- State ----
+  let state = {
+    notes: [],
+    currentNoteId: null,
+    activeTag: 'all',
+    searchQuery: '',
+    aiPanelOpen: false,
+    settings: {
+      apiEndpoint: '',
+      apiKey: '',
+      model: 'glm-5.1-flash',
+      theme: 'light'
+    },
+    viewMode: 'split', // split | edit | preview
+    isPinned: false,
+    saveTimer: null,
+    aiMessages: []
+  };
+
+  // ---- Initialization ----
+  document.addEventListener('DOMContentLoaded', () => {
+    loadFromStorage();
+    applyTheme(state.settings.theme);
+    renderTagBar();
+    renderNoteList();
+    if (state.notes.length === 0) {
+      showWelcome();
+    } else {
+      loadNote(state.notes[0].id);
+    }
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'n') { e.preventDefault(); createNote(); }
+        if (e.key === 's') { e.preventDefault(); saveCurrentNote(); showToast('已保存', 'success'); }
+        if (e.key === 'f') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+        if (e.key === 'i') { e.preventDefault(); toggleAiPanel(); }
+      }
+      // Escape to close settings
+      if (e.key === 'Escape') {
+        closeSettings();
+      }
+    });
+  });
+
+  // ---- Storage ----
+  function saveToStorage() {
+    try {
+      const data = {
+        notes: state.notes,
+        settings: state.settings,
+        aiMessages: state.aiMessages.slice(-50) // keep last 50 messages
+      };
+      localStorage.setItem('glmnote_data', JSON.stringify(data));
+    } catch(e) {
+      console.warn('Save failed:', e);
+    }
+  }
+
+  function loadFromStorage() {
+    try {
+      const raw = localStorage.getItem('glmnote_data');
+      if (raw) {
+        const data = JSON.parse(raw);
+        state.notes = data.notes || [];
+        state.settings = { ...state.settings, ...(data.settings || {}) };
+        state.aiMessages = data.aiMessages || [];
+        // Hydrate settings form
+        document.getElementById('settingEndpoint').value = state.settings.apiEndpoint || '';
+        document.getElementById('settingApiKey').value = state.settings.apiKey || '';
+        document.getElementById('settingModel').value = state.settings.model || 'glm-5.1-flash';
+        document.getElementById('settingTheme').value = state.settings.theme || 'light';
+      }
+    } catch(e) {
+      console.warn('Load failed:', e);
+    }
+    // Ensure at least one sample note if empty
+    if (state.notes.length === 0) {
+      createSampleNote();
+    }
+  }
+
+  function createSampleNote() {
+    const now = Date.now();
+    state.notes.push({
+      id: generateId(),
+      title: '👋 欢迎使用 GlmNote！',
+      content: `# 欢迎使用 GlmNote 🎉\n\n这是一篇示例笔记，帮助你快速上手！\n\n## ✨ 核心特性\n\n- **Markdown 编辑** - 实时预览，所见即所得\n- **AI 智能问答** - 选中笔记内容，让 AI 帮你总结、解释、扩展\n- **标签管理** - 用标签组织笔记，快速筛选\n- **全文搜索** - 瞬间找到你需要的内容\n- **主题切换** - 浅色/深色自由切换\n\n## 🚀 快速指南\n\n1. 点击左侧 ➕ 创建新笔记\n2. 在设置中配置你的 AI API（支持 GLM-5.1）\n3. 点击右上角 🤖 打开 AI 面板\n4. 使用 \`Ctrl + N\` 新建，\`Ctrl + S\` 保存\n\n> 💡 GlmNote 的所有数据都存储在浏览器本地，安全可靠！\n\n---\n\n### 代码示例\n\n\`\`\`javascript\nconsole.log("Hello, GlmNote!");\n\`\`\`\n\n### 列表示例\n\n- [x] 了解 Markdown 语法\n- [ ] 配置 AI API\n- [ ] 创建第一篇笔记\n`,
+      tags: ['入门', '指南'],
+      createdAt: now,
+      updatedAt: now,
+      pinned: true
+    });
+    state.notes.push({
+      id: generateId(),
+      title: 'GLM-5.1 模型介绍',
+      content: `# GLM-5.1 模型介绍\n\n## 概述\n\nGLM-5.1 是智谱 AI 推出的新一代大语言模型，在多个基准测试中表现优异。\n\n## 核心能力\n\n1. **强大的语言理解** - 中文理解能力业界领先\n2. **长上下文处理** - 支持 128K 上下文窗口\n3. **函数调用** - 原生支持工具调用\n4. **多模态理解** - 支持图像理解\n\n## 应用场景\n\n- 智能写作助手\n- 代码生成与审查\n- 知识问答\n- 数据分析\n\n> 参考：[智谱 AI 开放平台](https://open.bigmodel.cn)`,
+      tags: ['AI', 'GLM'],
+      createdAt: now - 1000,
+      updatedAt: now - 1000,
+      pinned: false
+    });
+    saveToStorage();
+  }
+
+  // ---- Utility ----
+  function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // ---- Theme ----
+  function setTheme(theme) {
+    state.settings.theme = theme;
+    applyTheme(theme);
+    document.getElementById('settingTheme').value = theme;
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    // Update highlight.js theme
+    const hljsLink = document.getElementById('hljs-theme-link');
+    if (theme === 'dark') {
+      hljsLink.href = 'https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/styles/github-dark.min.css';
+    } else {
+      hljsLink.href = 'https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/styles/github.min.css';
+    }
+  }
+
+  // ---- Toast ----
+  function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.3s';
+      setTimeout(() => toast.remove(), 300);
+    }, 2500);
+  }
+
+  // ---- Sidebar: Tags ----
+  function getAllTags() {
+    const tags = new Set();
+    state.notes.forEach(n => (n.tags || []).forEach(t => tags.add(t)));
+    return Array.from(tags).sort();
+  }
+
+  function renderTagBar() {
+    const bar = document.getElementById('tagBar');
+    const tags = getAllTags();
+    let html = '<span class="tag-chip active" data-tag="all" onclick="filterByTag(\'all\')">🏷️ 全部</span>';
+    tags.forEach(t => {
+      const count = state.notes.filter(n => (n.tags || []).includes(t)).length;
+      html += `<span class="tag-chip" data-tag="${escapeHtml(t)}" onclick="filterByTag('${escapeHtml(t)}')">${escapeHtml(t)} (${count})</span>`;
+    });
+    html += `<span class="tag-chip add-tag" onclick="addTagToCurrent()">+ 标签</span>`;
+    bar.innerHTML = html;
+    // Re-highlight active
+    bar.querySelectorAll('.tag-chip').forEach(el => {
+      if (el.dataset.tag === state.activeTag) el.classList.add('active');
+    });
+  }
+
+  function filterByTag(tag) {
+    state.activeTag = tag;
+    document.querySelectorAll('#tagBar .tag-chip').forEach(el => {
+      el.classList.toggle('active', el.dataset.tag === tag);
+    });
+    renderNoteList();
+  }
+
+  // ---- Sidebar: Note List ----
+  function getFilteredNotes() {
+    let list = [...state.notes];
+    // Search filter
+    if (state.searchQuery.trim()) {
+      const q = state.searchQuery.toLowerCase();
+      list = list.filter(n =>
+        n.title.toLowerCase().includes(q) ||
+        (n.content || '').toLowerCase().includes(q)
+      );
+    }
+    // Tag filter
+    if (state.activeTag !== 'all') {
+      list = list.filter(n => (n.tags || []).includes(state.activeTag));
+    }
+    // Sort: pinned first, then by updatedAt desc
+    list.sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return b.updatedAt - a.updatedAt;
+    });
+    return list;
+  }
+
+  function renderNoteList() {
+    const list = document.getElementById('noteList');
+    const filtered = getFilteredNotes();
+    if (filtered.length === 0) {
+      list.innerHTML = `<div class="note-list-empty"><span class="big-icon">📄</span><span>没有找到匹配的笔记</span></div>`;
+      return;
+    }
+    let html = '';
+    filtered.forEach(n => {
+      const preview = (n.content || '').replace(/[#*`\[\]()>|~_\-]/g, '').slice(0, 80).trim() || '空笔记';
+      const isActive = n.id === state.currentNoteId;
+      const time = formatTime(n.updatedAt);
+      const tags = (n.tags || []).map(t => `<span class="mini-tag">${escapeHtml(t)}</span>`).join('');
+      html += `
+        <div class="note-item ${isActive ? 'active' : ''}" onclick="loadNote('${n.id}')">
+          <div class="note-title">${n.pinned ? '<span class="pin-icon">📌</span>' : ''}${escapeHtml(n.title || '无标题')}</div>
+          <div class="note-preview">${escapeHtml(preview)}</div>
+          <div class="note-meta"><span>${time}</span></div>
+          ${tags ? `<div class="note-tags-inline">${tags}</div>` : ''}
+          <button class="note-delete" onclick="event.stopPropagation(); deleteNote('${n.id}')" title="删除">🗑️</button>
+        </div>
+      `;
+    });
+    list.innerHTML = html;
+  }
+
+  function formatTime(ts) {
+    const d = new Date(ts);
+    const now = new Date();
+    const diff = now - d;
+    if (diff < 60000) return '刚刚';
+    if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+    if (diff < 604800000) return Math.floor(diff / 86400000) + '天前';
+    return `${d.getMonth()+1}/${d.getDate()}`;
+  }
+
+  function filterNotes() {
+    state.searchQuery = document.getElementById('searchInput').value;
+    renderNoteList();
+  }
+
+  // ---- Note CRUD ----
+  function createNote() {
+    saveCurrentNote(); // save before switching
+    const note = {
+      id: generateId(),
+      title: '新笔记',
+      content: '开始编写...',
+      tags: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      pinned: false
+    };
+    state.notes.unshift(note);
+    saveToStorage();
+    loadNote(note.id);
+    renderNoteList();
+    renderTagBar();
+    // Focus title
+    setTimeout(() => document.getElementById('noteTitleInput').focus(), 100);
+    showToast('已创建新笔记', 'success');
+  }
+
+  function loadNote(id) {
+    saveCurrentNote();
+    const note = state.notes.find(n => n.id === id);
+    if (!note) return;
+    state.currentNoteId = id;
+    state.isPinned = note.pinned || false;
+    // Show editor, hide welcome
+    document.getElementById('welcomeScreen').style.display = 'none';
+    const editorArea = document.getElementById('editorArea');
+    editorArea.style.display = 'flex';
+    editorArea.classList.remove('hidden');
+    // Populate fields
+    document.getElementById('noteTitleInput').value = note.title || '';
+    document.getElementById('noteContentInput').value = note.content || '';
+    document.getElementById('pinBtn').style.opacity = note.pinned ? '1' : '0.3';
+    updatePreview();
+    renderNoteList();
+  }
+
+  function saveCurrentNote() {
+    if (!state.currentNoteId) return;
+    const note = state.notes.find(n => n.id === state.currentNoteId);
+    if (!note) return;
+    note.title = document.getElementById('noteTitleInput').value.trim() || '无标题';
+    note.content = document.getElementById('noteContentInput').value;
+    note.updatedAt = Date.now();
+    note.pinned = state.isPinned;
+    saveToStorage();
+    renderNoteList();
+  }
+
+  function autoSave() {
+    clearTimeout(state.saveTimer);
+    state.saveTimer = setTimeout(() => {
+      saveCurrentNote();
+    }, 800);
+  }
+
+  function deleteNote(id) {
+    if (!confirm('确定要删除这篇笔记吗？')) return;
+    state.notes = state.notes.filter(n => n.id !== id);
+    if (state.currentNoteId === id) {
+      state.currentNoteId = null;
+      if (state.notes.length > 0) {
+        loadNote(state.notes[0].id);
+      } else {
+        document.getElementById('editorArea').style.display = 'none';
+        showWelcome();
+      }
+    }
+    saveToStorage();
+    renderNoteList();
+    renderTagBar();
+    showToast('笔记已删除', 'info');
+  }
+
+  function showWelcome() {
+    document.getElementById('welcomeScreen').style.display = 'flex';
+    document.getElementById('editorArea').style.display = 'none';
+    state.currentNoteId = null;
+  }
+
+  function togglePin() {
+    state.isPinned = !state.isPinned;
+    document.getElementById('pinBtn').style.opacity = state.isPinned ? '1' : '0.3';
+    saveCurrentNote();
+    renderNoteList();
+  }
+
+  // ---- Editor ----
+  function updatePreview() {
+    const content = document.getElementById('noteContentInput').value || '';
+    const preview = document.getElementById('previewPane');
+    try {
+      const html = marked.parse(content, { breaks: true, gfm: true });
+      preview.innerHTML = html;
+      // Highlight code blocks (safe check)
+      if (typeof hljs !== 'undefined') {
+        preview.querySelectorAll('pre code').forEach(block => {
+          try { hljs.highlightElement(block); } catch(e) { /* skip hljs errors */ }
+        });
+      }
+    } catch(e) {
+      preview.innerHTML = escapeHtml(content)
+        .replace(/\n/g, '<br>')
+        .replace(/  /g, '&nbsp;&nbsp;')
+        + `<p style="color:var(--warning);font-size:12px;margin-top:8px;">⚠️ Markdown 渲染暂不可用，请检查网络连接</p>`;
+    }
+  }
+
+  function setEditorMode(mode) {
+    state.viewMode = mode;
+    const body = document.getElementById('editorBody');
+    body.className = 'editor-body';
+    if (mode === 'edit') body.classList.add('edit-only');
+    else if (mode === 'preview') body.classList.add('preview-only');
+    else body.classList.add('split');
+    // Update tabs
+    document.querySelectorAll('.pane-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+  }
+
+  function toggleViewMode() {
+    const modes = ['split', 'edit', 'preview'];
+    const currentIdx = modes.indexOf(state.viewMode);
+    const next = modes[(currentIdx + 1) % modes.length];
+    setEditorMode(next);
+    const labels = { split: '📐 分栏', edit: '✏️ 编辑', preview: '👁️ 预览' };
+    document.getElementById('viewModeBtn').textContent = labels[next];
+  }
+
+  // ---- Export ----
+  function exportNote() {
+    if (!state.currentNoteId) return;
+    const note = state.notes.find(n => n.id === state.currentNoteId);
+    if (!note) return;
+    const content = `# ${note.title}\n\n${note.content}`;
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${note.title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_')}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('导出成功', 'success');
+  }
+
+  // ---- Tags on current note ----
+  function addTagToCurrent() {
+    if (!state.currentNoteId) { showToast('请先选择一篇笔记', 'info'); return; }
+    const tag = prompt('输入新标签名称：');
+    if (!tag || !tag.trim()) return;
+    const note = state.notes.find(n => n.id === state.currentNoteId);
+    if (!note) return;
+    if (!note.tags) note.tags = [];
+    if (note.tags.includes(tag.trim())) { showToast('标签已存在', 'info'); return; }
+    note.tags.push(tag.trim());
+    saveToStorage();
+    renderTagBar();
+    renderNoteList();
+    showToast('标签已添加', 'success');
+  }
+
+  // ---- Settings ----
+  function openSettings() {
+    document.getElementById('settingsModal').classList.add('open');
+    document.getElementById('settingEndpoint').value = state.settings.apiEndpoint || '';
+    document.getElementById('settingApiKey').value = state.settings.apiKey || '';
+    document.getElementById('settingModel').value = state.settings.model || 'glm-5.1-flash';
+    document.getElementById('settingTheme').value = state.settings.theme || 'light';
+  }
+
+  function closeSettings() {
+    document.getElementById('settingsModal').classList.remove('open');
+  }
+
+  function saveSettings() {
+    state.settings.apiEndpoint = document.getElementById('settingEndpoint').value.trim();
+    state.settings.apiKey = document.getElementById('settingApiKey').value.trim();
+    state.settings.model = document.getElementById('settingModel').value.trim() || 'glm-5.1-flash';
+    state.settings.theme = document.getElementById('settingTheme').value;
+    applyTheme(state.settings.theme);
+    saveToStorage();
+    closeSettings();
+    showToast('设置已保存', 'success');
+  }
+
+  // ---- AI Panel ----
+  function toggleAiPanel() {
+    state.aiPanelOpen = !state.aiPanelOpen;
+    const panel = document.getElementById('aiPanel');
+    const btn = document.getElementById('toggleAiBtn');
+    panel.classList.toggle('hidden', !state.aiPanelOpen);
+    btn.classList.toggle('active', state.aiPanelOpen);
+    if (state.aiPanelOpen) {
+      // Restore messages from state
+      renderAiMessages();
+      setTimeout(() => document.getElementById('aiInput').focus(), 200);
+    }
+  }
+
+  function renderAiMessages() {
+    const container = document.getElementById('aiMessages');
+    if (state.aiMessages.length === 0) {
+      container.innerHTML = `
+        <div class="ai-welcome" id="aiWelcome">
+          <div class="ai-welcome-icon">🧠</div>
+          <p>我是你的 AI 知识助手</p>
+          <p style="font-size:12px;">支持 GLM-5.1 等多款模型</p>
+          <p style="font-size:11px;margin-top:8px;">💡 先在设置中配置 API</p>
+        </div>`;
+      return;
+    }
+    let html = '';
+    state.aiMessages.forEach(msg => {
+      const role = msg.role === 'user' ? 'user' : 'assistant';
+      const avatar = role === 'user' ? '👤' : '🤖';
+      html += `
+        <div class="ai-message ${role}">
+          <div class="msg-avatar">${avatar}</div>
+          <div class="msg-content">${renderMessageContent(msg.content)}</div>
+        </div>`;
+    });
+    container.innerHTML = html;
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function renderMessageContent(content) {
+    if (typeof content === 'string') {
+      // Simple markdown rendering for messages
+      return content
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br>');
+    }
+    if (Array.isArray(content)) {
+      return content.map(c => c.text || '').join('');
+    }
+    return String(content);
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  function handleAiKeydown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendAiMessage();
+    }
+  }
+
+  async function sendAiMessage() {
+    const input = document.getElementById('aiInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    // Check settings
+    if (!state.settings.apiEndpoint || !state.settings.apiKey) {
+      showToast('请先在设置中配置 API 地址和密钥', 'error');
+      openSettings();
+      return;
+    }
+
+    // Add user message
+    state.aiMessages.push({ role: 'user', content: text });
+    input.value = '';
+    input.style.height = 'auto';
+    renderAiMessages();
+    document.getElementById('aiSendBtn').disabled = true;
+
+    // Add loading indicator
+    const container = document.getElementById('aiMessages');
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'ai-message assistant';
+    loadingDiv.innerHTML = `
+      <div class="msg-avatar">🤖</div>
+      <div class="msg-content ai-loading">
+        <span></span><span></span><span></span>
+      </div>`;
+    container.appendChild(loadingDiv);
+    container.scrollTop = container.scrollHeight;
+
+    try {
+      // Build context with current note if available
+      let systemPrompt = '你是一个智能知识助手，帮助用户管理笔记和知识。请用简洁、专业的语言回答。';
+      let noteContext = '';
+      if (state.currentNoteId) {
+        const note = state.notes.find(n => n.id === state.currentNoteId);
+        if (note) {
+          noteContext = `\n\n当前笔记标题: ${note.title}\n当前笔记内容: ${note.content.slice(0, 2000)}`;
+        }
+      }
+
+      // Prepare messages for API
+      const messages = [
+        { role: 'system', content: systemPrompt + noteContext }
+      ];
+      // Add last 10 messages for context
+      const recentMessages = state.aiMessages.slice(-10);
+      recentMessages.forEach(m => {
+        messages.push({ role: m.role, content: typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.map(c => c.text).join('') : '') });
+      });
+
+      const response = await fetch(state.settings.apiEndpoint + '/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.settings.apiKey}`
+        },
+        body: JSON.stringify({
+          model: state.settings.model,
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 2048,
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        throw new Error(`API 请求失败 (${response.status}): ${errText.slice(0, 200)}`);
+      }
+
+      const data = await response.json();
+      const reply = data.choices?.[0]?.message?.content || '抱歉，未能获取到有效回复。';
+
+      // Remove loading
+      loadingDiv.remove();
+      state.aiMessages.push({ role: 'assistant', content: reply });
+      renderAiMessages();
+      saveToStorage();
+
+    } catch (err) {
+      loadingDiv.remove();
+      state.aiMessages.push({ role: 'assistant', content: `❌ 错误: ${err.message}` });
+      renderAiMessages();
+      showToast('AI 响应失败: ' + err.message, 'error');
+    }
+
+    document.getElementById('aiSendBtn').disabled = false;
+    document.getElementById('aiInput').focus();
+  }
+
+  // ---- Handle page close ----
+  window.addEventListener('beforeunload', () => {
+    saveCurrentNote();
+  });
+
+  console.log('📝 GlmNote loaded! Happy note-taking!');
+</script>
+</body>
+</html>
